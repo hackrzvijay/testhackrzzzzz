@@ -9,9 +9,9 @@ jobs:
       image: debian:latest
 
     steps:
-      - name: Update APT and install curl
+      - name: Update APT and install curl and procps
         run: |
-          apt update && apt install -y curl
+          apt update && apt install -y curl procps
 
       - name: Collect system info
         run: |
